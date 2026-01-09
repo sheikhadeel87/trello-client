@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Edit, Trash2, User } from 'lucide-react';
+import { Edit, Trash2, User, Image as ImageIcon, File } from 'lucide-react';
 
 const TaskCard = ({ task, onEdit, onDelete }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -93,6 +93,59 @@ const TaskCard = ({ task, onEdit, onDelete }) => {
           </span>
         </div>
       )}
+      
+      {/* Image Uploaded Attachment Display */}
+      {task.attachment && (() => {
+        // Construct the base URL for file access
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
+        // Get base URL without /api
+        let baseUrl = 'http://localhost:5005';
+        if (apiUrl) {
+          baseUrl = apiUrl.replace(/\/api\/?$/, '') || 'http://localhost:5005';
+        }
+        const imageUrl = `${baseUrl}/uploads/${task.attachment}`;
+        
+        return (
+          <a
+            href={imageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="mb-2 p-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors block"
+          >
+            <div className="flex items-center space-x-2">
+              {task.attachment.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                <div className="w-12 h-12 rounded overflow-hidden bg-gray-100 flex-shrink-0 relative">
+                  <img
+                    src={imageUrl}
+                    alt={task.attachment}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Image load error:', imageUrl, task.attachment);
+                      e.target.style.display = 'none';
+                      const fallback = e.target.parentElement.querySelector('.image-fallback');
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                    onLoad={() => console.log('Image loaded successfully:', imageUrl)}
+                  />
+                  <div className="image-fallback w-full h-full flex items-center justify-center absolute inset-0" style={{ display: 'none' }}>
+                    <ImageIcon className="h-6 w-6 text-gray-400" />
+                  </div>
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded bg-primary-100 flex items-center justify-center flex-shrink-0">
+                  <File className="h-6 w-6 text-primary-600" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-900 truncate">{task.attachment}</p>
+                <p className="text-xs text-gray-500">Click to preview</p>
+              </div>
+            </div>
+          </a>
+        );
+      })()}
+      
       <div className="text-xs text-gray-400">
         {new Date(task.createdAt).toLocaleDateString()}
       </div>
