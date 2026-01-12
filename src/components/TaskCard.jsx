@@ -101,7 +101,7 @@ const TaskCard = ({ task, onEdit, onDelete }) => {
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
               >
                 <Edit className="h-4 w-4" />
-                <span>Edit</span>
+                <span>Edit/View</span>
               </button>
               <button
                 onClick={(e) => handleActionClick(e, () => onDelete(task._id))}
