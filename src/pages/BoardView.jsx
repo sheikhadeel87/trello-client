@@ -191,7 +191,7 @@ const BoardView = () => {
               className="btn-primary flex items-center space-x-2 ml-4"
             >
               <Plus className="h-5 w-5" />
-              <span>Create Task</span>
+              <span>Create Task AA</span>
             </button>
           </div>
         </div>

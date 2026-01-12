@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { workspaceAPI, userAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Users, UserPlus, UserMinus, Crown, Shield, Search } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, UserMinus, Crown, Shield, Search, Edit, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +16,8 @@ const WorkspaceSettings = () => {
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isEditingWorkspace, setIsEditingWorkspace] = useState(false);
+  const [workspaceFormData, setWorkspaceFormData] = useState({ name: '', description: '' });
 
   useEffect(() => {
     fetchData();
@@ -86,6 +88,40 @@ const WorkspaceSettings = () => {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.msg || 'Failed to update role');
+    }
+  };
+
+  const handleEditWorkspace = () => {
+    setWorkspaceFormData({
+      name: workspace.name,
+      description: workspace.description || '',
+    });
+    setIsEditingWorkspace(true);
+  };
+
+  const handleSaveWorkspace = async (e) => {
+    e?.preventDefault();
+    try {
+      await workspaceAPI.update(workspaceId, workspaceFormData);
+      toast.success('Workspace updated successfully');
+      setIsEditingWorkspace(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.msg || 'Failed to update workspace');
+    }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    const confirmMessage = `⚠️ WARNING: Are you sure you want to delete "${workspace.name}"?\n\nThis will PERMANENTLY DELETE:\n- All boards in this workspace\n- All tasks in those boards\n\nThis action CANNOT be undone!`;
+    
+    if (!window.confirm(confirmMessage)) return;
+    
+    try {
+      await workspaceAPI.delete(workspaceId);
+      toast.success('Workspace deleted successfully');
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error(error.response?.data?.msg || 'Failed to delete workspace');
     }
   };
 
@@ -335,25 +371,89 @@ const WorkspaceSettings = () => {
 
           <div className="space-y-6">
             <div className="card">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Workspace Info</h2>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-gray-500">Name</p>
-                  <p className="font-medium text-gray-900">{workspace.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Description</p>
-                  <p className="font-medium text-gray-900">
-                    {workspace.description || 'No description'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Created</p>
-                  <p className="font-medium text-gray-900">
-                    {new Date(workspace.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Workspace Info</h2>
+                {isWorkspaceAdmin() && (
+                  <div className="flex space-x-2">
+                    {!isEditingWorkspace ? (
+                      <>
+                        <button
+                          onClick={handleEditWorkspace}
+                          className="btn-secondary text-sm flex items-center space-x-1"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={handleDeleteWorkspace}
+                          className="bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-red-700 transition-colors flex items-center space-x-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleSaveWorkspace}
+                          className="btn-primary text-sm"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setIsEditingWorkspace(false)}
+                          className="btn-secondary text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
+              
+              {isEditingWorkspace ? (
+                <form onSubmit={handleSaveWorkspace} className="space-y-3">
+                  <div>
+                    <label className="label">Name</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      value={workspaceFormData.name}
+                      onChange={(e) => setWorkspaceFormData({ ...workspaceFormData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Description</label>
+                    <textarea
+                      className="input-field"
+                      rows="3"
+                      value={workspaceFormData.description}
+                      onChange={(e) => setWorkspaceFormData({ ...workspaceFormData, description: e.target.value })}
+                    />
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-gray-500">Name</p>
+                    <p className="font-medium text-gray-900">{workspace.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Description</p>
+                    <p className="font-medium text-gray-900">
+                      {workspace.description || 'No description'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Created</p>
+                    <p className="font-medium text-gray-900">
+                      {new Date(workspace.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -37,14 +37,14 @@ const BoardColumn = ({ board, boardTasks, children, isWorkspaceMember, isWorkspa
             <div className="flex space-x-1">
               <button
                 onClick={() => onEditBoard(board)}
-                className="p-1 hover:bg-primary-700 rounded"
+                className="p-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 rounded text-white transition-colors"
                 title="Edit Board"
               >
                 <Edit className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onDeleteBoard(board._id)}
-                className="p-1 hover:bg-primary-700 rounded"
+                className="p-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 rounded text-white transition-colors"
                 title="Delete Board"
               >
                 <Trash2 className="h-4 w-4" />
