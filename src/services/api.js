@@ -1,12 +1,20 @@
 import axios from 'axios';
 
-// Get API base URL and ensure it ends with /api
+// Get API base URL and ensure it ends with /api (but not /api/api)
 let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
 
-// If VITE_API_URL doesn't end with /api, append it
-if (API_BASE_URL && !API_BASE_URL.endsWith('/api')) {
-  // Remove trailing slash if present, then add /api
-  API_BASE_URL = API_BASE_URL.replace(/\/$/, '') + '/api';
+// Normalize the URL: remove trailing slashes and ensure it ends with /api (but not /api/api)
+if (API_BASE_URL) {
+  // Remove trailing slashes
+  API_BASE_URL = API_BASE_URL.replace(/\/+$/, '');
+  
+  // If it doesn't end with /api, add it
+  // But if it ends with /api/api, remove one /api
+  if (API_BASE_URL.endsWith('/api/api')) {
+    API_BASE_URL = API_BASE_URL.replace(/\/api\/api$/, '/api');
+  } else if (!API_BASE_URL.endsWith('/api')) {
+    API_BASE_URL = API_BASE_URL + '/api';
+  }
 }
 
 // Debug log (remove in production)
