@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
@@ -9,7 +9,26 @@ import WorkspaceList from './pages/WorkspaceList';
 import WorkspaceBoards from './pages/WorkspaceBoards';
 import WorkspaceSettings from './pages/WorkspaceSettings';
 import BoardView from './pages/BoardView';
+import TeamMembers from './pages/TeamMembers';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Wrapper to handle invite token - always show Login/Register if inviteToken is present
+const AuthRoute = ({ children, user }) => {
+  const [searchParams] = useSearchParams();
+  const hasInviteToken = searchParams.get('inviteToken');
+  
+  // If there's an invite token, always show the page (Login/Register) even if logged in
+  if (hasInviteToken) {
+    return children;
+  }
+  
+  // Otherwise, redirect logged-in users to dashboard
+  if (user) {
+    return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+  }
+  
+  return children;
+};
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -26,11 +45,11 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/login"
-        element={user ? <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace /> : <Login />}
+        element={<AuthRoute user={user}><Login /></AuthRoute>}
       />
       <Route
         path="/register"
-        element={user ? <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace /> : <Register />}
+        element={<AuthRoute user={user}><Register /></AuthRoute>}
       />
       <Route
         path="/admin/*"
@@ -45,6 +64,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <UserDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/team-members"
+        element={
+          <ProtectedRoute>
+            <TeamMembers />
           </ProtectedRoute>
         }
       />

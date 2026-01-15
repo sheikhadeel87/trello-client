@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { workspaceAPI, userAPI } from '../services/api';
+import { workspaceAPI, teamAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Users, UserPlus, UserMinus, Crown, Shield, Search, Edit, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -25,24 +25,21 @@ const WorkspaceSettings = () => {
 
   const fetchData = async () => {
     try {
-      const [workspaceRes, usersRes] = await Promise.all([
+      const [workspaceRes, teamMembersRes] = await Promise.all([
         workspaceAPI.getById(workspaceId),
-        userAPI.getAll(),
+        teamAPI.getMyMembers(), // Get only accepted team members invited by current user
       ]);
       setWorkspace(workspaceRes.data);
       
-      // Handle different response structures from backend
+      // Team API returns array of accepted team members (invited by current user)
       let users = [];
-      if (Array.isArray(usersRes.data)) {
-        users = usersRes.data;
-      } else if (usersRes.data?.user && Array.isArray(usersRes.data.user)) {
-        // Backend returns { user: [...] }
-        users = usersRes.data.user;
-      } else if (usersRes.data?.Found && Array.isArray(usersRes.data.Found)) {
-        // Alternative response structure
-        users = usersRes.data.Found;
+      if (Array.isArray(teamMembersRes.data)) {
+        users = teamMembersRes.data;
+      } else if (teamMembersRes.data?.data && Array.isArray(teamMembersRes.data.data)) {
+        users = teamMembersRes.data.data;
       }
       
+      console.log(`Loaded ${users.length} accepted team members for workspace settings`);
       setAllUsers(users);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -255,7 +252,7 @@ const WorkspaceSettings = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
                   <Users className="h-5 w-5" />
-                  <span>Members ({workspace.members?.length || 0})</span>
+                  <span>Members ({workspace.members?.filter(m => m && m.user && (m.user._id || m.user)).length || 0})</span>
                 </h2>
                 <div className="flex items-center space-x-3">
                   {isWorkspaceAdmin() ? (
@@ -286,7 +283,7 @@ const WorkspaceSettings = () => {
                 </div>
               </div>
 
-              {workspace.members?.length === 0 ? (
+              {!workspace.members || workspace.members.length === 0 ? (
                 <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 mb-4">No members in this workspace yet.</p>
@@ -302,68 +299,81 @@ const WorkspaceSettings = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {workspace.members?.map((member) => {
-                  const memberUser = member.user;
-                  const role = getMemberRole(member);
-                  const isCreator = role === 'creator';
-                  
-                  return (
-                    <div
-                      key={memberUser._id || memberUser}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-primary-100 p-2 rounded-full">
-                          <Users className="h-4 w-4 text-primary-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {memberUser.name || memberUser}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {memberUser.email || ''}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        {isCreator ? (
-                          <span className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
-                            <Crown className="h-3 w-3" />
-                            <span>Creator</span>
-                          </span>
-                        ) : (
-                          <>
-                            {isWorkspaceAdmin() && (
-                              <select
-                                value={member.role}
-                                onChange={(e) => handleUpdateRole(memberUser._id || memberUser, e.target.value)}
-                                className="text-sm border border-gray-300 rounded px-2 py-1"
-                              >
-                                <option value="member">Member</option>
-                                <option value="admin">Admin</option>
-                              </select>
-                            )}
-                            {!isWorkspaceAdmin() && (
-                              <span className="flex items-center space-x-1 px-2 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded">
-                                <Shield className="h-3 w-3" />
-                                <span className="capitalize">{member.role}</span>
+                  {workspace.members
+                    .filter((member) => {
+                      // Only show members that have valid user data
+                      return member && member.user && (member.user._id || member.user);
+                    })
+                    .map((member) => {
+                      const memberUser = member.user;
+                      // Skip if user data is not properly populated
+                      if (!memberUser || (!memberUser._id && !memberUser.name)) {
+                        return null;
+                      }
+                      
+                      const role = getMemberRole(member);
+                      const isCreator = role === 'creator';
+                      const memberId = memberUser._id || memberUser;
+                      
+                      return (
+                        <div
+                          key={memberId}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="bg-primary-100 p-2 rounded-full">
+                              <Users className="h-4 w-4 text-primary-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {memberUser.name || 'Unknown User'}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {memberUser.email || ''}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            {isCreator ? (
+                              <span className="flex items-center space-x-1 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
+                                <Crown className="h-3 w-3" />
+                                <span>Creator</span>
                               </span>
+                            ) : (
+                              <>
+                                {isWorkspaceAdmin() && (
+                                  <select
+                                    value={member.role}
+                                    onChange={(e) => handleUpdateRole(memberId, e.target.value)}
+                                    className="text-sm border border-gray-300 rounded px-2 py-1"
+                                  >
+                                    <option value="member">Member</option>
+                                    <option value="admin">Admin</option>
+                                  </select>
+                                )}
+                                {!isWorkspaceAdmin() && (
+                                  <span className="flex items-center space-x-1 px-2 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded">
+                                    <Shield className="h-3 w-3" />
+                                    <span className="capitalize">{member.role}</span>
+                                  </span>
+                                )}
+                                {isWorkspaceAdmin() && (
+                                  <button
+                                    onClick={() => handleRemoveMember(memberId)}
+                                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                    title="Remove Member"
+                                  >
+                                    <UserMinus className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </>
                             )}
-                            {isWorkspaceAdmin() && (
-                              <button
-                                onClick={() => handleRemoveMember(memberUser._id || memberUser)}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded"
-                                title="Remove Member"
-                              >
-                                <UserMinus className="h-4 w-4" />
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                  })}
+                          </div>
+                        </div>
+                      );
+                    })
+                    .filter(Boolean) // Remove any null entries from the filter
+                  }
                 </div>
               )}
             </div>

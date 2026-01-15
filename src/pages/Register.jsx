@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from '../services/api';
 
 const Register = () => {
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -11,8 +14,27 @@ const Register = () => {
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [inviteToken, setInviteToken] = useState(null);
+  const [invitationPending, setInvitationPending] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = searchParams.get('inviteToken');
+    const emailParam = searchParams.get('email');
+    const invitedEmail = emailParam ? decodeURIComponent(emailParam) : null;
+    
+    // Pre-fill email from URL params (from invitation)
+    if (invitedEmail) {
+      setFormData(prev => ({ ...prev, email: invitedEmail }));
+    }
+    
+    // Check for invite token
+    if (token) {
+      setInviteToken(token);
+      setInvitationPending(true);
+    }
+  }, [searchParams]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -32,6 +54,18 @@ const Register = () => {
     }
 
     setLoading(true);
+    
+    // First, accept the invitation if there's a token
+    if (inviteToken) {
+      try {
+        await api.get(`/users/accept-invitation?token=${inviteToken}`);
+        toast.success('Invitation accepted!');
+      } catch (err) {
+        console.error('Error accepting invitation:', err);
+        // Continue with registration even if acceptance fails
+      }
+    }
+    
     const result = await register(formData.name, formData.email, formData.password);
     setLoading(false);
     if (result.success) {
@@ -53,6 +87,12 @@ const Register = () => {
             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
               Create your account
             </h2>
+            {invitationPending && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-blue-600" />
+                <span className="text-blue-700 text-sm font-medium">Create your account to accept the invitation and join the team!</span>
+              </div>
+            )}
             <p className="mt-2 text-sm text-gray-600">
               Or{' '}
               <Link

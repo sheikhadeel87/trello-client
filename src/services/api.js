@@ -1,12 +1,20 @@
 import axios from 'axios';
 
-// Get API base URL and ensure it ends with /api
+// Get API base URL and ensure it ends with /api (but not /api/api)
 let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api';
 
-// If VITE_API_URL doesn't end with /api, append it
-if (API_BASE_URL && !API_BASE_URL.endsWith('/api')) {
-  // Remove trailing slash if present, then add /api
-  API_BASE_URL = API_BASE_URL.replace(/\/$/, '') + '/api';
+// Normalize the URL: remove trailing slashes and ensure it ends with /api (but not /api/api)
+if (API_BASE_URL) {
+  // Remove trailing slashes
+  API_BASE_URL = API_BASE_URL.replace(/\/+$/, '');
+  
+  // If it doesn't end with /api, add it
+  // But if it ends with /api/api, remove one /api
+  if (API_BASE_URL.endsWith('/api/api')) {
+    API_BASE_URL = API_BASE_URL.replace(/\/api\/api$/, '/api');
+  } else if (!API_BASE_URL.endsWith('/api')) {
+    API_BASE_URL = API_BASE_URL + '/api';
+  }
 }
 
 // Debug log (remove in production)
@@ -73,6 +81,7 @@ export const boardAPI = {
   create: (data) => api.post('/boards', data),
   update: (id, data) => api.put(`/boards/${id}`, data),
   delete: (id) => api.delete(`/boards/${id}`),
+  sendInvite: (boardId, userId) => api.post(`/boards/${boardId}/invite`, { userId }),
 };
 
 // Task API
@@ -122,9 +131,9 @@ export const taskAPI = {
   delete: (id) => api.delete(`/tasks/${id}`),
 };
 
-// Team API (Deprecated - kept for backward compatibility)
-// Use Workspace API instead
+// Team API
 export const teamAPI = {
+  getMyMembers: () => api.get('/teams/members'), // Get team members for current user (from Team table with inviting_id)
   create: (data) => api.post('/teams', data),
   getByBoard: (boardId) => api.get(`/teams/board/${boardId}`),
   addMember: (teamId, userId) => api.post(`/teams/${teamId}/add`, { userId }),
@@ -138,6 +147,7 @@ export const userAPI = {
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
+  sendInvite: (data) => api.post('/users/invite', data),
 };
 
 export default api;

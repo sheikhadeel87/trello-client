@@ -180,7 +180,7 @@ const TaskCard = ({ task, onEdit, onDelete }) => {
                       const fallback = e.target.parentElement.querySelector('.image-fallback');
                       if (fallback) fallback.style.display = 'flex';
                     }}
-                    onLoad={() => console.log('Image loaded successfully:', fileUrl)}
+                    onLoad={() => console.log('Image loaded successfully:')}
                   />
                   <div className="image-fallback w-full h-full flex items-center justify-center absolute inset-0" style={{ display: 'none' }}>
                     <ImageIcon className="h-6 w-6 text-gray-400" />

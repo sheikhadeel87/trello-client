@@ -55,6 +55,7 @@ const Layout = ({ children }) => {
                     </Link>
                   </>
                 ) : (
+                  <>
                   <Link
                     to="/dashboard"
                     className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
@@ -62,6 +63,14 @@ const Layout = ({ children }) => {
                     <LayoutDashboard className="h-4 w-4" />
                     <span>My Workspaces</span>
                   </Link>
+                  <Link
+                      to="/team-members"
+                      className="flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      <Users className="h-4 w-4" />
+                      <span>Team Members</span>
+                    </Link>
+                  </>
                 )}
               </nav>
             </div>
